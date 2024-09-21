@@ -26,7 +26,7 @@ def send_notification(conn, title, price, location, link, source):
             message = client.messages.create(
                 from_='whatsapp:+14155238886',
                 body=f"Nieuwe Huurwoning Gevonden op {source}: {title}\nPrijs: €{price}\nLocatie: {location}\nLink: {link}",
-                to='whatsapp:+31643517600'
+                to='whatsapp:' + os.getenv('MY_PHONE_NUMBER')
             )
 
             print(f"WhatsApp bericht verzonden: {message.sid}")
