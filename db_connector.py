@@ -28,17 +28,19 @@ def save_listing(conn, title, price, location, link, source):
         return
     cur = conn.cursor()
     try:
-        # Zorg ervoor dat de link uniek is door er een unieke sleutel van te maken
+        # Voeg een nieuwe woning toe of update een bestaande vermelding
         cur.execute("""
-            INSERT INTO rental_listings (title, price, location, link, source)
-            VALUES (%s, %s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE title=VALUES(title), price=VALUES(price), location=VALUES(location), source=VALUES(source);
-        """, (title, price, location, link, source))
+            INSERT INTO rental_listings (title, price, location, link, source, notified)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE title=VALUES(title), price=VALUES(price), location=VALUES(location), source=VALUES(source), notified=VALUES(notified);
+        """, (
+        title, price, location, link, source, False))  # Stel notified in op False bij nieuwe of bijgewerkte vermelding
         conn.commit()
     except Error as e:
         print(f"Fout bij het opslaan van de vermelding: {e}")
     finally:
         cur.close()
+
 
 def listing_exists(conn, link):
     if conn is None:
@@ -46,11 +48,13 @@ def listing_exists(conn, link):
         return False
     try:
         cur = conn.cursor()
-        cur.execute("SELECT 1 FROM rental_listings WHERE link = %s;", (link,))
-        exists = cur.fetchone() is not None
+        cur.execute("SELECT notified FROM rental_listings WHERE link = %s;", (link,))
+        result = cur.fetchone()
         cur.close()
-        return exists
+        if result is not None and result[
+            0] == 1:  # Als notified True is, bestaat de vermelding en is de notificatie al verstuurd
+            return True
+        return False
     except Error as e:
         print(f"Er ging iets mis bij het controleren van de woning in de database: {e}")
         return False
-
