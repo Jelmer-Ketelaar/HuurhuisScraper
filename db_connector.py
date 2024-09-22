@@ -34,7 +34,8 @@ def save_listing(conn, title, price, location, link, source):
             VALUES (%s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE title=VALUES(title), price=VALUES(price), location=VALUES(location), source=VALUES(source), notified=VALUES(notified);
         """, (
-        title, price, location, link, source, False))  # Stel notified in op False bij nieuwe of bijgewerkte vermelding
+            title, price, location, link, source,
+            False))  # Stel notified in op False bij nieuwe of bijgewerkte vermelding
         conn.commit()
     except Error as e:
         print(f"Fout bij het opslaan van de vermelding: {e}")
