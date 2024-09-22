@@ -1,16 +1,19 @@
+import logging
 import re
+
 import requests
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+
 from db_connector import save_listing, listing_exists, db_connection
 from send_notification import send_notification
-import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 # Helper om een sessie met retry-logica aan te maken
 def create_session():
@@ -20,11 +23,13 @@ def create_session():
     session.mount('https://', adapter)
     return session
 
+
 # Globale sessie gebruiken
 session = create_session()
 
 # Lijst om verwerkte links bij te houden (voorkomt dubbele checks binnen dezelfde sessie)
 processed_links = set()
+
 
 # Functie om webpagina's te scrapen (Google/Bing)
 def search_web(query, num_results=20, search_engine="google"):
@@ -49,6 +54,7 @@ def search_web(query, num_results=20, search_engine="google"):
     soup = BeautifulSoup(response.text, 'html.parser')
     return extract_search_results(soup, search_engine)
 
+
 # Functie om zoekresultaten te extraheren uit de HTML
 def extract_search_results(soup, search_engine):
     results = []
@@ -68,6 +74,7 @@ def extract_search_results(soup, search_engine):
                     results.append(link)
     return results
 
+
 # Functie om pagina-status te controleren
 def check_page_status(url):
     try:
@@ -80,6 +87,7 @@ def check_page_status(url):
         logger.error(f"Fout bij het openen van de pagina: {url} - {e}")
         return False
 
+
 # Functie om de prijs te extraheren en te normaliseren
 def clean_price(price_text):
     try:
@@ -89,8 +97,9 @@ def clean_price(price_text):
         logger.error(f"Ongeldige prijs: {price_text}")
         return None
 
-# Functie om huurwoningen van een URL te scrapen
-def scrape_listing_from_url(url):
+
+# Functie om huurwoningen van een URL te scrapen, met rent_min en rent_max parameters
+def scrape_listing_from_url(url, rent_min, rent_max):
     if not check_page_status(url):
         return
 
@@ -99,16 +108,22 @@ def scrape_listing_from_url(url):
     listings = soup.find_all('section', class_='listing-search-item')
 
     for listing in listings:
-        process_listing(listing, url)
+        process_listing(listing, url, rent_min, rent_max)
 
-# Functie om een enkele woningvermelding te verwerken
-def process_listing(listing, source_url):
+
+# Functie om een enkele woningvermelding te verwerken, met min- en maxprijs controle
+def process_listing(listing, source_url, rent_min, rent_max):
     title = listing.find('a', class_='listing-search-item__link--title').text.strip()
     price_text = listing.find('div', class_='listing-search-item__price').text.strip()
     price = clean_price(price_text)
 
-    if price is None or price > 1250:
-        logger.info(f"Prijs niet gevonden of te hoog voor: {title}")
+    if price is None:
+        logger.info(f"Prijs niet gevonden voor: {title}")
+    elif price < rent_min:
+        logger.info(f"Prijs te laag ({price}) voor: {title} (minimum: {rent_min})")
+        return
+    elif price > rent_max:
+        logger.info(f"Prijs te hoog ({price}) voor: {title} (maximum: {rent_max})")
         return
 
     location_element = listing.find('div', class_='listing-search-item__location')
@@ -125,6 +140,7 @@ def process_listing(listing, source_url):
     else:
         logger.info(f"Woning bestaat al in de database: {title}")
 
+
 # Helper-functie om een volledige link te bouwen
 def build_full_link(link_element, source_url):
     if link_element and 'href' in link_element.attrs:
@@ -133,20 +149,32 @@ def build_full_link(link_element, source_url):
     logger.error("Link niet gevonden")
     return None
 
+
 # Functie om vermelding op te slaan en notificatie te versturen
 def save_listing_and_notify(title, price, location, link, source):
     logger.info(f"Opslaan in database: {title}")
     save_listing(db_connection, title, price, location, link, source)
     logger.info(f"Verstuur notificatie voor: {title}")
-    send_notification(title, price, location, link, source)
+    send_notification(db_connection, title, price, location, link, source)
 
-# Scraping met dynamische filters
-def scrape_with_ai(city=None, rent_max=None, custom_queries=None):
+
+# Scraping met dynamische filters en ondersteuning voor minimale prijs
+def scrape_with_ai(city=None, rent_min=None, rent_max=None, custom_queries=None):
     city = city or input("Enter city: ")
-    rent_max = int(rent_max or input("Enter maximum rent: "))
+    try:
+        rent_min = int(rent_min or input("Enter minimum rent: "))
+        rent_max = int(rent_max or input("Enter maximum rent: "))
+    except ValueError:
+        logger.error("Ongeldige invoer voor huurprijs. Voer een geldig getal in.")
+        return
+
+    if rent_min > rent_max:
+        logger.error("Minimale huurprijs kan niet groter zijn dan de maximale huurprijs.")
+        return
+
     custom_queries = custom_queries or [
-        f"huurwoningen in {city} onder {rent_max} euro",
-        f"appartement huren {city} max {rent_max}",
+        f"huurwoningen in {city} tussen {rent_min} en {rent_max} euro",
+        f"appartement huren {city} tussen {rent_min} en {rent_max} euro",
         f"woning huren {city} goedkoop"
     ]
 
@@ -164,7 +192,8 @@ def scrape_with_ai(city=None, rent_max=None, custom_queries=None):
         if site not in processed_links:
             processed_links.add(site)
             logger.info(f"Scraping website: {site}")
-            scrape_listing_from_url(site)
+            scrape_listing_from_url(site, rent_min, rent_max)
+
 
 # Start de scraping functie
 scrape_with_ai()
