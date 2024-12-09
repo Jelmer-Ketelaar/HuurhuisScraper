@@ -5,57 +5,56 @@ import requests
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from urllib3.util.retry import Retry
 
 from db_connector import save_listing, listing_exists, db_connection
-from send_notification import send_notification
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# Helper om een sessie met retry-logica aan te maken
-def create_session():
-    session = requests.Session()
+# Helper om een scraping sessie met retry-logica aan te maken
+def create_scraping_session():
+    scraping_session_instance = requests.Session()
     retry = Retry(connect=3, backoff_factor=1)
     adapter = HTTPAdapter(max_retries=retry)
-    session.mount('https://', adapter)
-    return session
+    scraping_session_instance.mount('https://', adapter)
+    return scraping_session_instance
 
 
-# Globale sessie gebruiken
-session = create_session()
-
-# Lijst om verwerkte links bij te houden (voorkomt dubbele checks binnen dezelfde sessie)
+# Globale scraping sessie gebruiken
+global_scraping_session = create_scraping_session()
 processed_links = set()
 
 
-# Functie om webpagina's te scrapen (Google/Bing)
+# Webpagina scrapen
 def search_web(query, num_results=20, search_engine="google"):
     ua = UserAgent()
     headers = {'User-Agent': ua.random}
 
+    GOOGLE_SEARCH_URL = f"https://www.google.com/search?q={query}&num={num_results}"
+
     search_url = {
-        "google": f"https://www.google.com/search?q={query}&num={num_results}",
-        "bing": f"https://www.bing.com/search?q={query}&count={num_results}",
-        "duckduckgo": f"https://duckduckgo.com/html?q={query}"
+        "google": GOOGLE_SEARCH_URL.format(query=query, num_results=num_results),
     }.get(search_engine, None)
 
     if not search_url:
         logger.error(f"Onbekende zoekmachine: {search_engine}")
         return []
 
-    response = session.get(search_url, headers=headers)
-    if response.status_code != 200:
-        logger.error(f"Zoekopdracht mislukt met status code: {response.status_code}")
+    try:
+        response = global_scraping_session.get(search_url, headers=headers)
+        response.raise_for_status()  # Check for HTTP errors
+    except requests.RequestException as e:
+        logger.error(f"Fout bij het uitvoeren van de zoekopdracht: {e}")
         return []
 
     soup = BeautifulSoup(response.text, 'html.parser')
     return extract_search_results(soup, search_engine)
 
 
-# Functie om zoekresultaten te extraheren uit de HTML
+# Extract search results
 def extract_search_results(soup, search_engine):
     results = []
     if search_engine == "google":
@@ -75,35 +74,47 @@ def extract_search_results(soup, search_engine):
     return results
 
 
-# Functie om pagina-status te controleren
-def check_page_status(url):
-    try:
-        response = session.get(url, timeout=10)
-        if response.status_code in [404, 410]:
-            logger.warning(f"Pagina niet gevonden of verwijderd: {url}")
-            return False
-        return True
-    except requests.RequestException as e:
-        logger.error(f"Fout bij het openen van de pagina: {url} - {e}")
-        return False
+# Scraping logica met geavanceerde filters
+def scrape_with_ai(city, rent_min, rent_max, neighborhood=None, home_type=None):
+    queries = [
+        f"huurwoningen in {city} tussen {rent_min} en {rent_max} euro",
+        f"appartement huren in {city} tussen {rent_min} en {rent_max} euro"
+    ]
+
+    # Voeg geavanceerde filters toe aan de zoekopdracht
+    if neighborhood:
+        queries.append(f"huurwoningen in {neighborhood} in {city}")
+    if home_type:
+        queries.append(f"{home_type} huren in {city}")
+
+    google_results = []
+    bing_results = []
+
+    for query in queries:
+        google_results.extend(search_web(query, num_results=20, search_engine="google"))
+        bing_results.extend(search_web(query, num_results=20, search_engine="bing"))
+
+    # Voeg unieke websites toe voor scraping
+    websites = set(google_results + bing_results)
+
+    for site in websites:
+        if site not in processed_links:
+            processed_links.add(site)
+            try:
+                scrape_listing_from_url(site, rent_min, rent_max)
+            except Exception as e:
+                logger.error(f"Fout bij het scrapen van {site}: {e}")
 
 
-# Functie om de prijs te extraheren en te normaliseren
-def clean_price(price_text):
-    try:
-        price = re.sub(r"\D", '', price_text)
-        return int(price)
-    except ValueError:
-        logger.error(f"Ongeldige prijs: {price_text}")
-        return None
-
-
-# Functie om huurwoningen van een URL te scrapen, met rent_min en rent_max parameters
+# Scrapen van een woningvermelding
 def scrape_listing_from_url(url, rent_min, rent_max):
-    if not check_page_status(url):
+    try:
+        response = global_scraping_session.get(url)
+        response.raise_for_status()  # Controleer op fouten
+    except requests.RequestException as e:
+        logger.error(f"Fout bij het openen van URL: {url} - {e}")
         return
 
-    response = session.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
     listings = soup.find_all('section', class_='listing-search-item')
 
@@ -111,89 +122,28 @@ def scrape_listing_from_url(url, rent_min, rent_max):
         process_listing(listing, url, rent_min, rent_max)
 
 
-# Functie om een enkele woningvermelding te verwerken, met min- en maxprijs controle
+# Verwerken van een enkele woningvermelding
 def process_listing(listing, source_url, rent_min, rent_max):
-    title = listing.find('a', class_='listing-search-item__link--title').text.strip()
-    price_text = listing.find('div', class_='listing-search-item__price').text.strip()
-    price = clean_price(price_text)
-
-    if price is None:
-        logger.info(f"Prijs niet gevonden voor: {title}")
-    elif price < rent_min:
-        logger.info(f"Prijs te laag ({price}) voor: {title} (minimum: {rent_min})")
-        return
-    elif price > rent_max:
-        logger.info(f"Prijs te hoog ({price}) voor: {title} (maximum: {rent_max})")
-        return
-
-    location_element = listing.find('div', class_='listing-search-item__location')
-    location = location_element.text.strip() if location_element else "Locatie onbekend"
-
-    link_element = listing.find('a', class_='listing-search-item__link--title')
-    link = build_full_link(link_element, source_url)
-
-    if not link or not check_page_status(link):
-        return
-
-    if not listing_exists(db_connection, link):
-        save_listing_and_notify(title, price, location, link, source_url)
-    else:
-        logger.info(f"Woning bestaat al in de database: {title}")
-
-
-# Helper-functie om een volledige link te bouwen
-def build_full_link(link_element, source_url):
-    if link_element and 'href' in link_element.attrs:
-        link = link_element['href']
-        return link if link.startswith('http') else f'{source_url.rstrip("/")}/{link.lstrip("/")}'
-    logger.error("Link niet gevonden")
-    return None
-
-
-# Functie om vermelding op te slaan en notificatie te versturen
-def save_listing_and_notify(title, price, location, link, source):
-    logger.info(f"Opslaan in database: {title}")
-    save_listing(db_connection, title, price, location, link, source)
-    logger.info(f"Verstuur notificatie voor: {title}")
-    send_notification(db_connection, title, price, location, link, source)
-
-
-# Scraping met dynamische filters en ondersteuning voor minimale prijs
-def scrape_with_ai(city=None, rent_min=None, rent_max=None, custom_queries=None):
-    city = city or input("Enter city: ")
     try:
-        rent_min = int(rent_min or input("Enter minimum rent: "))
-        rent_max = int(rent_max or input("Enter maximum rent: "))
+        title = listing.find('a', class_='listing-search-item__link--title').text.strip()
+        price_text = listing.find('div', class_='listing-search-item__price').text.strip()
+        price = clean_price(price_text)
+
+        if price is None or price < rent_min or price > rent_max:
+            return
+
+        location = listing.find('div', class_='listing-search-item__location').text.strip()
+        link = listing.find('a', class_='listing-search-item__link--title')['href']
+
+        if not listing_exists(db_connection, link):
+            save_listing(db_connection, title, price, location, link, source_url)
+    except Exception as e:
+        logger.error(f"Fout bij het verwerken van de woningvermelding: {e}")
+
+
+# Functie om prijs te verwerken
+def clean_price(price_text):
+    try:
+        return int(re.sub(r"\D", '', price_text))
     except ValueError:
-        logger.error("Ongeldige invoer voor huurprijs. Voer een geldig getal in.")
-        return
-
-    if rent_min > rent_max:
-        logger.error("Minimale huurprijs kan niet groter zijn dan de maximale huurprijs.")
-        return
-
-    custom_queries = custom_queries or [
-        f"huurwoningen in {city} tussen {rent_min} en {rent_max} euro",
-        f"appartement huren {city} tussen {rent_min} en {rent_max} euro",
-        f"woning huren {city} goedkoop"
-    ]
-
-    google_results = []
-    bing_results = []
-
-    for query in custom_queries:
-        google_results.extend(search_web(query, num_results=20, search_engine="google"))
-        bing_results.extend(search_web(query, num_results=20, search_engine="bing"))
-
-    # Voeg alleen de zoekresultaten toe aan de lijst van te scrapen websites
-    websites = set(google_results + bing_results)
-
-    for site in websites:
-        if site not in processed_links:
-            processed_links.add(site)
-            logger.info(f"Scraping website: {site}")
-            scrape_listing_from_url(site, rent_min, rent_max)
-
-
-# Start de scraping functie
-scrape_with_ai()
+        return None

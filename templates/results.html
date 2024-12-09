@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HuurhuisScraper Resultaten</title>
+</head>
+<body>
+<h1>Resultaten voor {{ city }}</h1>
+<table>
+    <thead>
+    <tr>
+        <th>Titel</th>
+        <th>Prijs</th>
+        <th>Locatie</th>
+        <th>Link</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for listing in listings %}
+    <tr>
+        <td>{{ listing[0] }}</td>
+        <td>{{ listing[1] }}</td>
+        <td>{{ listing[2] }}</td>
+        <td><a href="{{ listing[3] }}">Bekijk</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</body>
+</html>

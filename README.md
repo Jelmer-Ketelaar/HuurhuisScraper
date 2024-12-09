@@ -79,6 +79,21 @@ CREATE TABLE rental_listings (
     source VARCHAR(255),
     notified BOOLEAN DEFAULT FALSE
 );
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) UNIQUE,
+    password_hash VARCHAR(255)
+);
+
+CREATE TABLE filters (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    city VARCHAR(255),
+    rent_min INT,
+    rent_max INT,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
 ```
 
 ## Gebruik
