@@ -54,6 +54,10 @@ bestand:
 - `flake8`: Voor linting en het controleren van de codekwaliteit.
 - `pytest`: Voor het uitvoeren van unit tests en andere testscenario's.
 - `schedule`: Voor het periodiek plannen en uitvoeren van scraping-taken.
+- `Flask~=3.0.3`: Voor het bouwen van webapplicaties.
+- `urllib3~=2.2.3`: Voor HTTP-clientfunctionaliteit.
+- `Flask-Login~=0.6.3`: Voor gebruikersauthenticatie in Flask-applicaties.
+
 
 ## Configuratie
 
