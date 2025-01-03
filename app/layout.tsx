@@ -30,8 +30,8 @@ export default function RootLayout({
                 { href: "/", icon: Home, label: "Home" },
                 { href: "/zoeken", icon: Search, label: "Huurwoningen" },
                 { href: "/meldingen", icon: Bell, label: "Meldingen" },
-                { href: "/zoeker-status", icon: Activity, label: "Zoeker Status" },
-                { href: "/instellingen", icon: Settings, label: "Instellingen" },
+                { href: "/scraper-status", icon: Activity, label: "Zoeker Status" },
+                { href: "/settings", icon: Settings, label: "Instellingen" },
                 { href: "/over-ons", icon: Info, label: "Over Ons" },
               ].map((item) => (
                 <Link
