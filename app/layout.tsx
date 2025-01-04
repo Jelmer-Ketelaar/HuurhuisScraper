@@ -6,7 +6,7 @@ import { Metadata } from 'next'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'HuisVinder - Vind Jouw Perfecte Huurwoning in Nederland',
+  title: 'Huurhuis Scraper - Vind Jouw Perfecte Huurwoning in Nederland',
   description: 'Zoek en filter eenvoudig huurwoningen in heel Nederland met realtime updates en aanpasbare meldingen.',
   keywords: 'huur, woning, Nederland, Amsterdam, zoeker, vastgoed',
 }

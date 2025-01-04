@@ -7,7 +7,7 @@ export default function Home() {
   return (
     <div className="space-y-12">
       <section className="text-center py-16 bg-white rounded-lg shadow-xl">
-        <h1 className="text-5xl font-bold text-orange-600 mb-6">Welkom bij HuisVinder</h1>
+        <h1 className="text-5xl font-bold text-orange-600 mb-6">Welkom bij Huurhuis Scraper</h1>
         <p className="text-2xl text-gray-600 mb-10 max-w-3xl mx-auto">Ontdek jouw perfecte huurwoning in Nederland met realtime updates en slimme zoekopdrachten.</p>
         <Link href="/zoeken">
           <Button className="bg-teal-600 hover:bg-teal-700 text-white text-lg py-6 px-8 rounded-full shadow-lg transition-transform hover:scale-105">
