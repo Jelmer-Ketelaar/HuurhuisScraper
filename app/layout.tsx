@@ -6,7 +6,7 @@ import { Metadata } from 'next'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Huurhuis Scraper - Vind Jouw Perfecte Huurwoning in Nederland',
+  title: 'HuisVinder - Vind Jouw Perfecte Huurwoning in Nederland',
   description: 'Zoek en filter eenvoudig huurwoningen in heel Nederland met realtime updates en aanpasbare meldingen.',
   keywords: 'huur, woning, Nederland, Amsterdam, zoeker, vastgoed',
 }
@@ -30,8 +30,8 @@ export default function RootLayout({
                 { href: "/", icon: Home, label: "Home" },
                 { href: "/zoeken", icon: Search, label: "Huurwoningen" },
                 { href: "/meldingen", icon: Bell, label: "Meldingen" },
-                { href: "/scraper-status", icon: Activity, label: "Zoeker Status" },
-                { href: "/settings", icon: Settings, label: "Instellingen" },
+                { href: "/zoeker-status", icon: Activity, label: "Zoeker Status" },
+                { href: "/instellingen", icon: Settings, label: "Instellingen" },
                 { href: "/over-ons", icon: Info, label: "Over Ons" },
               ].map((item) => (
                 <Link
