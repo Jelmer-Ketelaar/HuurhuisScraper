@@ -1,7 +1,7 @@
 requests==2.32.2
 beautifulsoup4==4.12.2
 fake-useragent==1.2.0
-mysql-connector-python==8.0.33
+mysql-connector-python==9.1.0
 twilio==7.16.2
 python-dotenv==1.0.0
 flake8==6.0.0
