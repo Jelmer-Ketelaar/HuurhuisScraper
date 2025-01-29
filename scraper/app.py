@@ -116,10 +116,10 @@ def index():
         # Controleer of user_id aanwezig is in de sessie
         user_id = session.get('user_id')
         if not user_id:
-            return render_template('index.html', error="Gebruiker is niet ingelogd.")
+            return redirect('app/page.tsx')
 
         if not city or not rent_min or not rent_max:
-            return render_template('index.html', error="Vul alle vereiste velden in.")
+            return redirect('app/page.tsx')
 
         # Sla filters op in de database
         cur = conn.cursor()
