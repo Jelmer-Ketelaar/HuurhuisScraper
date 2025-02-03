@@ -1,8 +1,26 @@
+"use client"
+
+import { useAuth } from "../contexts/AuthContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Activity, Check, AlertTriangle } from 'lucide-react'
+import { Activity, Check, AlertTriangle } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 
 export default function ZoekerStatus() {
+  const { user } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!user) {
+      router.push("/login")
+    }
+  }, [user, router])
+
+  if (!user) {
+    return null // or a loading spinner
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-orange-600">Zoeker Status</h1>

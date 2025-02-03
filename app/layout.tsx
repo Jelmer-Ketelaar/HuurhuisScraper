@@ -1,109 +1,64 @@
-"use client"
-
-import {useState, useEffect} from "react"
-import {Inter} from "next/font/google"
-import {
-  Bell,
-  Home,
-  Settings,
-  Activity,
-  Search,
-  Info,
-  LogIn,
-  Menu,
-  X,
-  HelpCircle,
-  CreditCard,
-  List,
-} from "lucide-react"
+import { Inter } from "next/font/google"
 import Link from "next/link"
-import {usePathname} from "next/navigation"
-import {metadata} from "./metadata" // Import metadata from the server-side file
+import type { Metadata } from "next"
+import { AuthProvider } from "./contexts/AuthContext"
+import { LanguageProvider } from "./contexts/LanguageContext"
+import { NavLinks } from "./components/NavLinks"
+import { LanguageSelector } from "./components/LanguageSelector"
+import { AuthButton } from "./components/AuthButton"
+import { MobileMenu } from "./components/MobileMenu"
+import { Footer } from "./components/Footer"
 import type React from "react"
 
-const inter = Inter({subsets: ["latin"]})
+const inter = Inter({ subsets: ["latin"] })
+
+export const metadata: Metadata = {
+  title: "HuurhuisScraper - Vind Jouw Perfecte Huurwoning in Nederland",
+  description: "Zoek en filter eenvoudig huurwoningen in heel Nederland met realtime updates en aanpasbare meldingen.",
+  keywords: "huur, woning, Nederland, Amsterdam, zoeker, vastgoed",
+}
 
 export default function RootLayout({
-                                     children,
-                                   }: {
+  children,
+}: {
   children: React.ReactNode
 }) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const pathname = usePathname()
-
-  useEffect(() => {
-    setIsMenuOpen(false)
-  }, [])
-
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen)
-
-  const menuItems = [
-    {href: "/", icon: Home, label: "Home"},
-    {href: "/zoeken", icon: Search, label: "Huurwoningen"},
-    {href: "/listings", icon: List, label: "Listings"},
-    {href: "/prijzen", icon: CreditCard, label: "Prijzen"},
-    {href: "/meldingen", icon: Bell, label: "Meldingen"},
-    {href: "/zoeker-status", icon: Activity, label: "Zoeker Status"},
-    {href: "/instellingen", icon: Settings, label: "Instellingen"},
-    {href: "/faq", icon: HelpCircle, label: "FAQ"},
-    {href: "/over-ons", icon: Info, label: "Over Ons"},
-    {href: "/login", icon: LogIn, label: "Inloggen"},
-  ]
-
   return (
     <html lang="nl">
-    <body className={`${inter.className} bg-gradient-to-br from-orange-50 to-teal-50 min-h-screen`}>
-    <div className="flex flex-col md:flex-row min-h-screen">
-      {/* Mobile menu button */}
-      <button
-        className="md:hidden fixed top-4 right-4 z-50 p-2 bg-white rounded-full shadow-lg"
-        onClick={toggleMenu}
-        aria-label={isMenuOpen ? "Sluit menu" : "Open menu"}
-      >
-        {isMenuOpen ? <X className="w-6 h-6 text-teal-600"/> : <Menu className="w-6 h-6 text-teal-600"/>}
-      </button>
+      <body className={`${inter.className} bg-gradient-to-br from-orange-50 to-teal-50 min-h-screen`}>
+        <AuthProvider>
+          <LanguageProvider>
+            <div className="flex flex-col min-h-screen">
+              <header className="bg-white shadow-lg sticky top-0 z-50">
+                <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+                  <Link
+                    href="/"
+                    className="text-3xl font-bold text-orange-600 hover:text-orange-700 transition-colors duration-300"
+                  >
+                    HuurhuisScraper
+                  </Link>
+                  <nav className="hidden md:flex space-x-6">
+                    <NavLinks />
+                  </nav>
+                  <div className="hidden md:flex items-center space-x-4">
+                    <LanguageSelector />
+                    <AuthButton />
+                  </div>
+                  <MobileMenu />
+                </div>
+              </header>
 
-      {/* Sidebar for desktop */}
-      <aside className="hidden md:block w-64 bg-white shadow-lg">
-        <nav className="p-6 space-y-2">
-          {menuItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center px-4 py-2 text-gray-700 hover:bg-orange-50 rounded-lg transition-colors"
-            >
-              <item.icon className="w-5 h-5 mr-3 text-teal-600"/>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </aside>
+              <main className="flex-1 container mx-auto px-4 py-8">{children}</main>
 
-      {/* Full-screen mobile menu */}
-      <div
-        className={`fixed inset-0 bg-white z-40 transform transition-transform duration-300 ease-in-out ${
-          isMenuOpen ? "translate-x-0" : "-translate-x-full"
-        } md:hidden`}
-      >
-        <nav className="p-6 space-y-2 pt-16">
-          {menuItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center px-4 py-2 text-gray-700 hover:bg-orange-50 rounded-lg transition-colors"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <item.icon className="w-5 h-5 mr-3 text-teal-600"/>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </div>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-auto p-6 md:p-8">{children}</main>
-    </div>
-    </body>
+              <Footer />
+            </div>
+          </LanguageProvider>
+        </AuthProvider>
+      </body>
     </html>
   )
 }
+
+
+
+import './globals.css'

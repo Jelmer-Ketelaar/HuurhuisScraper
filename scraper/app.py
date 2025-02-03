@@ -81,7 +81,7 @@ def start_scraping_for_users_with_filters():
     while True:
         cur = conn.cursor()
         # Flexibel scraping-interval gebaseerd op gebruikersinstellingen
-        cur.execute("""
+        cur.execute("""    
             SELECT user_id, city, rent_min, rent_max, neighborhood, home_type 
             FROM user_filters 
             WHERE last_run_time < NOW() - INTERVAL 1 HOUR
