@@ -28,3 +28,6 @@ next-env.d.ts
 .DS_Store
 .ddev/config.yaml
 app/.DS_Store
+
+
+__pycache__/
